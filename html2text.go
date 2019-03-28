@@ -2,6 +2,7 @@ package html2text
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"regexp"
 	"strings"
@@ -238,7 +239,7 @@ func (ctx *textifyTraverseContext) handleElement(node *html.Node) error {
 		linkText := ""
 		// For simple link element content with single text node only, peek at the link text.
 		if node.FirstChild != nil && node.FirstChild.NextSibling == nil && node.FirstChild.Type == html.TextNode {
-			linkText = node.FirstChild.Data
+			linkText = strings.TrimSpace(node.FirstChild.Data)
 		}
 
 		// If image is the only child, take its alt text as the link text.
@@ -255,9 +256,19 @@ func (ctx *textifyTraverseContext) handleElement(node *html.Node) error {
 		hrefLink := ""
 		if attrVal := getAttrVal(node, "href"); attrVal != "" {
 			attrVal = ctx.normalizeHrefLink(attrVal)
-			// Don't print link href if it matches link element content or if the link is empty.
-			if !ctx.options.OmitLinks && attrVal != "" && linkText != attrVal {
-				hrefLink = "( " + attrVal + " )"
+			// Don't print link href if the link is empty.
+			if !ctx.options.OmitLinks && attrVal != "" {
+				// if the link text wasn't printed (see the TextNode handler) it needs to be printed here
+				if ctx.options.PrettyTables && ctx.options.PrettyTablesOptions != nil &&
+					ctx.options.PrettyTablesOptions.IgnoreSlackLink {
+					if linkText != "" {
+						hrefLink = fmt.Sprintf("<%s|_*%s*_>", attrVal, linkText)
+					} else /*if node.FirstChild == nil*/ { // empty link, display the link as text
+						hrefLink = fmt.Sprintf("<%s|_*%s*_>", attrVal, attrVal)
+					}
+				} else if linkText != attrVal { // Don't print link href if it matches link element content
+					hrefLink = "( " + attrVal + " )"
+				}
 			}
 		}
 
@@ -402,6 +413,18 @@ func (ctx *textifyTraverseContext) traverse(node *html.Node) error {
 		if ctx.isPre {
 			data = node.Data
 		} else {
+			// If ignore slack link is on then we need to provide links in a form
+			// that pretty tables can recognise.
+			// This happens in the A span handler, so don't output anything here.
+			// Note that is only handles links of the form <a href="link">text</a>
+			// ie: no internal spans.
+			if ctx.options.PrettyTables && ctx.options.PrettyTablesOptions != nil &&
+				ctx.options.PrettyTablesOptions.IgnoreSlackLink &&
+				!ctx.options.OmitLinks &&
+				node.Parent != nil && node.Parent.DataAtom == atom.A &&
+				getAttrVal(node.Parent, "href") != "" {
+				return nil
+			}
 			data = strings.Trim(spacingRe.ReplaceAllString(node.Data, " "), " ")
 		}
 		return ctx.emit(data)

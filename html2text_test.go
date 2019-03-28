@@ -473,6 +473,96 @@ func TestLinks(t *testing.T) {
 	}
 }
 
+func TestSlackLinks(t *testing.T) {
+	testCases := []struct {
+		input  string
+		output string
+	}{
+		{
+			`<a></a>`,
+			``,
+		},
+		{
+			`<a href=""></a>`,
+			``,
+		},
+		{
+			`<a href="http://example.com/"></a>`,
+			`<http://example.com/|_*http://example.com/*_>`,
+		},
+		{
+			`<a href="">Link</a>`,
+			`Link`,
+		},
+		{
+			`<a href="http://example.com/">Link</a>`,
+			`<http://example.com/|_*Link*_>`,
+		},
+		{
+			`<a href="http://example.com/"><span class="a">Link</span></a>`,
+			`Link <http://example.com/|_*http://example.com/*_>`,
+		},
+		{
+			"<a href='http://example.com/'>\n\t<span class='a'>Link</span>\n\t</a>",
+			`Link <http://example.com/|_*http://example.com/*_>`,
+		},
+		{
+			"<a href='mailto:contact@example.org'>Contact Us</a>",
+			`<contact@example.org|_*Contact Us*_>`,
+		},
+		{
+			"<a href=\"http://example.com:80/~user?aaa=bb&amp;c=d,e,f#foo\">Link</a>",
+			`<http://example.com:80/~user?aaa=bb&c=d,e,f#foo|_*Link*_>`,
+		},
+		{
+			"<a title='title' href=\"http://example.com/\">Link</a>",
+			`<http://example.com/|_*Link*_>`,
+		},
+		{
+			"<a href=\"   http://example.com/ \"> Link </a>",
+			`<http://example.com/|_*Link*_>`,
+		},
+		{
+			"<a href=\"http://example.com/a/\">Link A</a> <a href=\"http://example.com/b/\">Link B</a>",
+			`<http://example.com/a/|_*Link A*_> <http://example.com/b/|_*Link B*_>`,
+		},
+		{
+			"<a href=\"%%LINK%%\">Link</a>",
+			`<%%LINK%%|_*Link*_>`,
+		},
+		{
+			"<a href=\"[LINK]\">Link</a>",
+			`<[LINK]|_*Link*_>`,
+		},
+		{
+			"<a href=\"{LINK}\">Link</a>",
+			`<{LINK}|_*Link*_>`,
+		},
+		{
+			"<a href=\"[[!unsubscribe]]\">Link</a>",
+			`<[[!unsubscribe]]|_*Link*_>`,
+		},
+		{
+			"<p>This is <a href=\"http://www.google.com\" >link1</a> and <a href=\"http://www.google.com\" >link2 </a> is next.</p>",
+			`This is <http://www.google.com|_*link1*_> and <http://www.google.com|_*link2*_> is next.`,
+		},
+		{
+			"<a href=\"http://www.google.com\" >http://www.google.com</a>",
+			`<http://www.google.com|_*http://www.google.com*_>`,
+		},
+	}
+	pt := NewPrettyTablesOptions()
+	pt.IgnoreSlackLink = true
+	op := Options{PrettyTables: true, PrettyTablesOptions: pt}
+	for _, testCase := range testCases {
+		if msg, err := wantString(testCase.input, testCase.output, op); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
+	}
+}
+
 func TestOmitLinks(t *testing.T) {
 	testCases := []struct {
 		input  string
