@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/olekukonko/tablewriter"
+	"github.com/FrankSpitulski/tablewriter"
 	"github.com/ssor/bom"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -38,6 +38,7 @@ type PrettyTablesOptions struct {
 	RowLine              bool
 	AutoMergeCells       bool
 	Borders              tablewriter.Border
+	IgnoreSlackLink      bool
 }
 
 // NewPrettyTablesOptions creates PrettyTablesOptions with default settings
@@ -59,6 +60,7 @@ func NewPrettyTablesOptions() *PrettyTablesOptions {
 		RowLine:              false,
 		AutoMergeCells:       false,
 		Borders:              tablewriter.Border{Left: true, Right: true, Bottom: true, Top: true},
+		IgnoreSlackLink:      false,
 	}
 }
 
@@ -338,6 +340,7 @@ func (ctx *textifyTraverseContext) handleTableElement(node *html.Node) error {
 			table.SetRowLine(options.RowLine)
 			table.SetAutoMergeCells(options.AutoMergeCells)
 			table.SetBorders(options.Borders)
+			table.SetIgnoreSlackLink(options.IgnoreSlackLink)
 		}
 		table.SetHeader(ctx.tableCtx.header)
 		table.SetFooter(ctx.tableCtx.footer)
